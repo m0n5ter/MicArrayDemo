@@ -1,10 +1,12 @@
 ﻿using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
-using System.Net.Mime;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using NAudio.CoreAudioApi;
 using NAudio.Wave;
 
@@ -12,16 +14,66 @@ namespace TwoMicTest;
 
 public class MainViewModel : ObservableObject
 {
-    private WasapiCapture _capture1;
-    private WasapiCapture _capture2;
-    private MemoryStream _ms1;
-    private MemoryStream _ms2;
     private MMDeviceEnumerator _enumerator;
     private string? _playbackDevice;
+    private RecorderViewModel? _recorder2;
+    private RecorderViewModel? _recorder1;
 
     public ObservableCollection<string> PlaybackDevices { get; } = new();
     
     public ObservableCollection<string> RecordDevices { get; } = new();
+
+    public MainViewModel()
+    {
+        TestCommand = new AsyncRelayCommand(Test, () => Error == null);
+    }
+
+    public string? Error => PlaybackDevice == null ? "Playback Device is required"
+        : Recorder1?.Device == null || Recorder2?.Device == null ? "Two recorder devices must be selected"
+        : Recorder1?.Device == Recorder2?.Device ? "Select two different recorder devices" : null;
+
+    public RecorderViewModel? Recorder1
+    {
+        get => _recorder1;
+        private set
+        {
+            var oldValue = _recorder1;
+
+            if (SetProperty(ref _recorder1, value))
+            {
+                if (oldValue != null) oldValue.PropertyChanged -= OnRecorderPropertyChanged;
+                if (value != null) value.PropertyChanged += OnRecorderPropertyChanged;
+                InvalidateTestCommand();
+            }
+        }
+    }
+
+    private void OnRecorderPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        InvalidateTestCommand();
+    }
+
+    private void InvalidateTestCommand()
+    {
+        OnPropertyChanged(nameof(Error));
+        TestCommand.NotifyCanExecuteChanged();
+    }
+
+    public RecorderViewModel? Recorder2
+    {
+        get => _recorder2;
+        private set
+        {
+            var oldValue = _recorder2;
+
+            if (SetProperty(ref _recorder2, value))
+            {
+                if (oldValue != null) oldValue.PropertyChanged -= OnRecorderPropertyChanged;
+                if (value != null) value.PropertyChanged += OnRecorderPropertyChanged;
+                InvalidateTestCommand();
+            }
+        }
+    }
 
     public async Task Initialize()
     {
@@ -36,6 +88,9 @@ public class MainViewModel : ObservableObject
             _enumerator.EnumerateAudioEndPoints(DataFlow.Capture, DeviceState.Active).OrderBy(_ => _.FriendlyName).ToList().ForEach(d => RecordDevices.Add(d.FriendlyName));
 
             PlaybackDevice = PlaybackDevices.FirstOrDefault();
+
+            Recorder1 = new RecorderViewModel(this){Device = RecordDevices.FirstOrDefault()};
+            Recorder2 = new RecorderViewModel(this) {Device = RecordDevices.Skip(1).FirstOrDefault()};
         });
     }
 
@@ -47,37 +102,36 @@ public class MainViewModel : ObservableObject
 
     public async Task Test()
     {
-        var sss = WaveIn.DeviceCount;
-        var ddd = new MMDeviceEnumerator().EnumerateAudioEndPoints(DataFlow.Capture, DeviceState.Active).ToArray();
-        _capture1 = new WasapiCapture(ddd[0]);
-        _capture2 = new WasapiCapture(ddd[2]);
-
-        _ms1 = new MemoryStream();
-        _ms2 = new MemoryStream();
-
-
-        _capture1.DataAvailable += (s, a) =>
+        await Task.Run(async () =>
         {
-            _ms1.Write(a.Buffer, 0, a.BytesRecorded);
-            if (_ms1.Position >= 1000000)
-            {
-                _capture1.StopRecording();
-                var ttt = _ms1.GetBuffer();
-            }
-        };
+            var playbackEnded = new ManualResetEventSlim(false);
 
-        _capture2.DataAvailable += (s, a) =>
-        {
-            _ms2.Write(a.Buffer, 0, a.BytesRecorded);
-            if (_ms2.Position >= 1000000)
-            {
-                _capture2.StopRecording();
-                var ttt = _ms1.GetBuffer();
-            }
-        };
+            var playbackDevice = _enumerator.EnumerateAudioEndPoints(DataFlow.Render, DeviceState.Active)
+                .FirstOrDefault(d => d.FriendlyName == PlaybackDevice);
+            Recorder1?.Warmup(_enumerator);
+            Recorder2?.Warmup(_enumerator);
 
-        _capture1.StartRecording();
-        _capture2.StartRecording();
+            Recorder1?.Start();
+            Recorder2?.Start();
+
+            var playMs = new MemoryStream(File.ReadAllBytes("test.wav"));
+            WaveStream waveStream = new WaveFileReader(playMs);
+            var totalTime = waveStream.TotalTime;
+            var player = new WasapiOut(playbackDevice, AudioClientShareMode.Shared, true, 0);
+            player.Init(waveStream);
+            player.PlaybackStopped += (_, _) => playbackEnded.Set();
+
+            await Task.Delay(100);
+            player.Play();
+            playbackEnded.WaitHandle.WaitOne();
+            await Task.Delay(100);
+
+            Recorder1?.Stop();
+            Recorder2?.Stop();
+        });
+
     }
+
+    public AsyncRelayCommand TestCommand { get; }
 
 }

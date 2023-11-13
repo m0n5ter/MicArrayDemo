@@ -8,7 +8,7 @@
     mc:Ignorable="d"
     FontSize="14"
     SizeToContent="Height"
-    Width="600"
+    Width="800"
     ResizeMode="NoResize"
     WindowStartupLocation="CenterScreen"
     Title="Microphone Test DEMO v1.0"
@@ -27,8 +27,8 @@
         </Grid>
 
         <UniformGrid Columns="2" Margin="0,10,0,0">
-            <twoMicTest:RecorderControl Header="Record Device 1" Margin="0,0,5,0"/>
-            <twoMicTest:RecorderControl Header="Record Device 2" Margin="5,0,0,0"/>
+            <twoMicTest:RecorderControl Header="Record Device 1" Margin="0,0,5,0" DataContext="{Binding Recorder1}"/>
+            <twoMicTest:RecorderControl Header="Record Device 2" Margin="5,0,0,0" DataContext="{Binding Recorder2}"/>
         </UniformGrid>
 
         <Grid Margin="0,20,0,0">
@@ -37,8 +37,8 @@
                 <ColumnDefinition/>
             </Grid.ColumnDefinitions>
 
-            <Button Grid.Column="1" Padding="20,10" HorizontalAlignment="Left">
-                <TextBlock TextAlignment="Center">Start<LineBreak/>Test</TextBlock>
+            <Button Grid.Column="1" Padding="20,20" HorizontalAlignment="Left" Command="{Binding TestCommand}">
+                <TextBlock TextAlignment="Center">Start Test</TextBlock>
             </Button>
         </Grid>
 

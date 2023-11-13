@@ -1,0 +1,25 @@
+﻿<Application 
+    x:Class="TwoMicTest.App"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:twoMicTest="clr-namespace:TwoMicTest">
+
+    <Application.Resources>
+        <Style TargetType="Button">
+            <Setter Property="Padding" Value="20,8"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+        </Style>
+
+        <Style x:Key="GroupBoxStyle" TargetType="GroupBox">
+            <Setter Property="Padding" Value="10,10"/>
+        </Style>
+
+        <Style TargetType="GroupBox" BasedOn="{StaticResource GroupBoxStyle}"/>
+        <Style TargetType="twoMicTest:RecorderControl" BasedOn="{StaticResource GroupBoxStyle}"/>
+
+        <Style TargetType="ComboBox">
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Padding" Value="10,5"/>
+        </Style>
+    </Application.Resources>
+</Application>

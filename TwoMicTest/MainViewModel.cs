@@ -14,13 +14,13 @@ namespace TwoMicTest;
 
 public class MainViewModel : ObservableObject
 {
-    private MMDeviceEnumerator _enumerator;
+    private readonly MMDeviceEnumerator _enumerator = new();
     private string? _playbackDevice;
     private RecorderViewModel? _recorder2;
     private RecorderViewModel? _recorder1;
 
     public ObservableCollection<string> PlaybackDevices { get; } = new();
-    
+
     public ObservableCollection<string> RecordDevices { get; } = new();
 
     public MainViewModel()
@@ -43,6 +43,7 @@ public class MainViewModel : ObservableObject
             {
                 if (oldValue != null) oldValue.PropertyChanged -= OnRecorderPropertyChanged;
                 if (value != null) value.PropertyChanged += OnRecorderPropertyChanged;
+           
                 InvalidateTestCommand();
             }
         }
@@ -82,8 +83,6 @@ public class MainViewModel : ObservableObject
     {
         await Application.Current.Dispatcher.InvokeAsync(() =>
         {
-            _enumerator = new MMDeviceEnumerator();
-            
             PlaybackDevices.Clear();
             RecordDevices.Clear();
 
@@ -107,16 +106,16 @@ public class MainViewModel : ObservableObject
     {
         await Task.Run(async () =>
         {
+            if (Recorder1 == null || Recorder2 == null) return;
+
             var playbackEnded = new ManualResetEventSlim(false);
 
             var playbackDevice = _enumerator.EnumerateAudioEndPoints(DataFlow.Render, DeviceState.Active)
                 .FirstOrDefault(d => d.FriendlyName == PlaybackDevice);
 
-            Recorder1?.Warmup(_enumerator);
-            Recorder2?.Warmup(_enumerator);
+            await Task.WhenAll(Recorder1.Warmup(_enumerator), Recorder2.Warmup(_enumerator));
 
-            Recorder1?.Start();
-            Recorder2?.Start();
+            Parallel.Invoke(() => Recorder1?.Start(), () => Recorder2?.Start());
 
             var playMs = new MemoryStream(await File.ReadAllBytesAsync("test.wav"));
             WaveStream waveStream = new WaveFileReader(playMs);
@@ -130,12 +129,9 @@ public class MainViewModel : ObservableObject
             playbackEnded.WaitHandle.WaitOne();
             await Task.Delay(200);
 
-            Recorder1?.Stop();
-            Recorder2?.Stop();
+            await Task.WhenAll(Recorder1.Stop(), Recorder2.Stop());
         });
-
     }
 
     public AsyncRelayCommand TestCommand { get; }
-
 }

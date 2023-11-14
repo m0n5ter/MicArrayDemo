@@ -19,7 +19,7 @@
 
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2" />
-    <PackageReference Include="HandyControls" Version="3.4.5" />
+    <PackageReference Include="MathConverter" Version="2.2.1-preview" />
     <PackageReference Include="NAudio" Version="2.2.1" />
   </ItemGroup>
 

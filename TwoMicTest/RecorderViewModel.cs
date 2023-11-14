@@ -2,10 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using NAudio.CoreAudioApi;
+using NAudio.Dsp;
 using NAudio.Wave;
 
 namespace TwoMicTest;
@@ -17,9 +19,10 @@ public class RecorderViewModel: ObservableObject
     private MMDevice? _recorderDevice;
     private WasapiCapture? _capture;
     private MemoryStream? _memoryStream;
-    private List<float> _samples = new();
+    private List<float>? _samples;
+    private readonly List<float> _currentSamples = new();
     private WaveFileWriter? _waveWriter;
-    private List<Range> _ranges;
+    private List<Range>? _ranges;
     private PointCollection? _waveform;
     private float _minLevel;
     private float _maxLevel;
@@ -37,24 +40,35 @@ public class RecorderViewModel: ObservableObject
         private set => SetProperty(ref _waveform, value);
     }
 
+    public List<float>? Samples
+    {
+        get => _samples;
+        set => SetProperty(ref _samples, value);
+    }
+
     public string? Device
     {
         get => _device;
         set => SetProperty(ref _device, value);
     }
 
-    public void Warmup(MMDeviceEnumerator enumerator)
+    public Task Warmup(MMDeviceEnumerator enumerator) => Task.Run(() =>
     {
         _recorderDevice = enumerator.EnumerateAudioEndPoints(DataFlow.Capture, DeviceState.Active).FirstOrDefault(d => d.FriendlyName == Device) ??
                           throw new Exception($"Device was disconnected: {Device}");
 
-        _capture = new WasapiCapture(_recorderDevice){WaveFormat = _format};
+        _capture = new WasapiCapture(_recorderDevice) {WaveFormat = _format};
         _memoryStream = new MemoryStream();
         _waveWriter = new WaveFileWriter(_memoryStream, _format);
-        _samples.Clear();
+        Samples = null;
+        Ranges = null;
         Waveform = null;
+        MaxLevel = 0;
+        MinLevel = 0;
 
-        _capture.DataAvailable += (s, a) =>
+        _currentSamples.Clear();
+
+        _capture.DataAvailable += (_, a) =>
         {
             var i = 0;
 
@@ -62,36 +76,46 @@ public class RecorderViewModel: ObservableObject
             {
                 var f = BitConverter.ToSingle(a.Buffer, i);
                 i += 4;
-                _samples.Add(f);
+                _currentSamples.Add(f);
             }
 
             _waveWriter.Write(a.Buffer, 0, a.BytesRecorded);
         };
-    }
+    });
 
     public void Start()
     {
         _capture?.StartRecording();
     }
 
-    public void Stop()
+    public Task Stop() => Task.Run(async () =>
     {
         _capture?.StopRecording();
 
-        Ranges = _samples.Select((f, i) => new {group = Math.Clamp((int) Math.Round((double) i / _samples.Count * 100), 0, 99), f})
-            .GroupBy(g => g.group)
-            .Select(g => g.Select(_ => _.f).ToArray())
-            .Select(g => new Range(g.Min(), g.Max()))
-            .ToList();
+        Samples = _currentSamples;
+        MaxLevel = _currentSamples?.Max() ?? 0;
+        MinLevel = _currentSamples?.Min() ?? 0;
 
-        Application.Current.Dispatcher.Invoke(() =>
+        Ranges = GetRanges(_currentSamples, 24);
+
+        var waveRanges = GetRanges(_currentSamples, 200);
+        
+        var points = waveRanges?.Select((range, i) => new Point(i, range.Min + 1))
+            .Concat(waveRanges.AsEnumerable().Reverse().Select((range, i) => new Point(waveRanges.Count - i - 1, range.Max + 1)));
+
+        await Application.Current.Dispatcher.InvokeAsync(() =>
         {
-            Waveform = new PointCollection(Ranges.Select((range, i) => new Point(i, range.Min + 1)).Concat(Ranges.AsEnumerable().Reverse().Select((range, i) => new Point(Ranges.Count - i - 1, range.Max + 1))));
+            Waveform = points == null ? null : new PointCollection(points);
         });
 
-        MaxLevel = _samples.Max();
-        MinLevel = _samples.Min();
-    }
+    });
+
+    private List<Range>? GetRanges(IReadOnlyCollection<float>? samples, int n) =>
+        samples?.Select((f, i) => new {group = Math.Clamp((int) Math.Round((double) i / samples.Count * n - 0.5), 0, n - 1), f})
+            .GroupBy(g => g.group)
+            .Select(g => g.Select(i => i.f).ToArray())
+            .Select(g => new Range(g))
+            .ToList();
 
     public float MinLevel
     {
@@ -105,22 +129,9 @@ public class RecorderViewModel: ObservableObject
         set => SetProperty(ref _maxLevel, value);
     }
 
-    public List<Range> Ranges
+    public List<Range>? Ranges
     {
         get => _ranges;
         set => SetProperty(ref _ranges, value);
-    }
-}
-
-public struct Range
-{
-    public float Min { get; }
-    
-    public float Max { get; }
-
-    public Range(float min, float max)
-    {
-        Min = min;
-        Max = max;
     }
 }

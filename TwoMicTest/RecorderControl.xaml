@@ -7,8 +7,7 @@
     xmlns:twoMicTest="clr-namespace:TwoMicTest"
     mc:Ignorable="d" 
     d:DesignWidth="400"
-    d:DataContext="{d:DesignInstance twoMicTest:RecorderViewModel}"
-    >
+    d:DataContext="{d:DesignInstance twoMicTest:RecorderViewModel}">
 
     <Grid>
         <Grid.ColumnDefinitions>
@@ -18,23 +17,47 @@
 
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="100"/>
+            <RowDefinition Height="80"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
         
-        <ComboBox Margin="0,0,5,0" Grid.ColumnSpan="2" ItemsSource="{Binding MainViewModel.RecordDevices}" SelectedItem="{Binding Device}"></ComboBox>
+        <ComboBox Margin="0,0,10,0" Grid.ColumnSpan="2" ItemsSource="{Binding MainViewModel.RecordDevices}" SelectedItem="{Binding Device}"></ComboBox>
 
-        <Viewbox Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Stretch="Fill" Margin="0,5">
-            <Canvas Width="100" Height="2">
+        <Viewbox Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Stretch="Fill" Margin="0,5" ClipToBounds="True">
+            <Canvas Width="200" Height="2">
                 <Polygon Fill="SlateGray" Points="{Binding Waveform}"/>
-                <Line Stroke="Gray" Opacity="0.5" X1="0" X2="100" Y1="1" Y2="1" StrokeThickness="0.01"/>
+                <Line Stroke="Gray" X1="0" X2="500" Y1="1" Y2="1" StrokeThickness="0.01"/>
+                <Line Stroke="Gray" X1="0" X2="500" Y1="2" Y2="1.99" StrokeThickness="0.01"/>
             </Canvas>
         </Viewbox>
 
-        <TextBlock Grid.Row="2" Grid.Column="0">Maximum:</TextBlock>
-        <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding MaxLevel, StringFormat=p1}" FontWeight="Bold" HorizontalAlignment="Right"/>
+        <Viewbox Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Stretch="Fill" Margin="0,0,0,10" Opacity="0.5">
+            <ItemsControl ItemsSource="{Binding Ranges}" Height="2">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="{x:Type twoMicTest:Range}">
+                        <Border VerticalAlignment="Bottom" Width="1" Margin="1,0" Height="{Binding Amplitude}" Background="DarkOrange"/>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <StackPanel Orientation="Horizontal"/>
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+            </ItemsControl>
+        </Viewbox>
+
+        <TextBlock Grid.Row="3" Grid.Column="0">Maximum:</TextBlock>
+        <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding MaxLevel, StringFormat=p1}" FontWeight="Bold" HorizontalAlignment="Right"/>
+
+        <TextBlock Grid.Row="4" Grid.Column="0">Minimum:</TextBlock>
+        <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding MinLevel, StringFormat=p1}" FontWeight="Bold" HorizontalAlignment="Right"/>
+
+        <TextBlock Grid.Row="5" Grid.Column="0">Samples:</TextBlock>
+        <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding Samples.Count, FallbackValue=0}" FontWeight="Bold" HorizontalAlignment="Right"/>
     </Grid>
 
 </GroupBox>

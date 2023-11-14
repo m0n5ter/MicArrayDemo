@@ -37,9 +37,11 @@
                 <ColumnDefinition/>
             </Grid.ColumnDefinitions>
 
-            <Button Grid.Column="1" Padding="20,20" HorizontalAlignment="Left" Command="{Binding TestCommand}">
+            <Button Grid.Column="0" Padding="20,20" HorizontalAlignment="Left" Command="{Binding TestCommand}">
                 <TextBlock TextAlignment="Center">Start Test</TextBlock>
             </Button>
+
+            <TextBlock Grid.Column="1" Margin="40,0,0,0" VerticalAlignment="Center" Text="{Binding Error}" FontWeight="Bold" Foreground="DarkRed"/>
         </Grid>
 
 

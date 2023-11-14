@@ -5,7 +5,10 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:twoMicTest="clr-namespace:TwoMicTest"
-    mc:Ignorable="d" d:DataContext="{d:DesignInstance twoMicTest:RecorderViewModel}">
+    mc:Ignorable="d" 
+    d:DesignWidth="400"
+    d:DataContext="{d:DesignInstance twoMicTest:RecorderViewModel}"
+    >
 
     <Grid>
         <Grid.ColumnDefinitions>
@@ -23,10 +26,15 @@
         
         <ComboBox Margin="0,0,5,0" Grid.ColumnSpan="2" ItemsSource="{Binding MainViewModel.RecordDevices}" SelectedItem="{Binding Device}"></ComboBox>
 
-        <TextBlock Grid.Row="2" Grid.Column="0">Maximum Level:</TextBlock>
-        <TextBlock Grid.Row="2" Grid.Column="1">1123</TextBlock>
-        <TextBlock Grid.Row="3" Grid.Column="0">Maximum Level:</TextBlock>
-        <TextBlock Grid.Row="3" Grid.Column="1">1123</TextBlock>
+        <Viewbox Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Stretch="Fill" Margin="0,5">
+            <Canvas Width="100" Height="2">
+                <Polygon Fill="SlateGray" Points="{Binding Waveform}"/>
+                <Line Stroke="Gray" Opacity="0.5" X1="0" X2="100" Y1="1" Y2="1" StrokeThickness="0.01"/>
+            </Canvas>
+        </Viewbox>
+
+        <TextBlock Grid.Row="2" Grid.Column="0">Maximum:</TextBlock>
+        <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding MaxLevel, StringFormat=p1}" FontWeight="Bold" HorizontalAlignment="Right"/>
     </Grid>
 
 </GroupBox>

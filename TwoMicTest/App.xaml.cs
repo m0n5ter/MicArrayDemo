@@ -9,7 +9,7 @@ public partial class App
         base.OnStartup(e);
 
         var vm = new MainViewModel();
-        _= vm.Initialize();
+        _ = vm.Initialize();
 
         new MainWindow {DataContext = vm}.Show();
     }

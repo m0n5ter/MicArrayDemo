@@ -55,8 +55,11 @@ public class MainViewModel : ObservableObject
 
     private void InvalidateTestCommand()
     {
-        OnPropertyChanged(nameof(Error));
-        TestCommand.NotifyCanExecuteChanged();
+        Application.Current.Dispatcher.Invoke(() =>
+        {
+            OnPropertyChanged(nameof(Error));
+            TestCommand.NotifyCanExecuteChanged();
+        });
     }
 
     public RecorderViewModel? Recorder2
@@ -89,7 +92,7 @@ public class MainViewModel : ObservableObject
 
             PlaybackDevice = PlaybackDevices.FirstOrDefault();
 
-            Recorder1 = new RecorderViewModel(this){Device = RecordDevices.FirstOrDefault()};
+            Recorder1 = new RecorderViewModel(this) {Device = RecordDevices.FirstOrDefault()};
             Recorder2 = new RecorderViewModel(this) {Device = RecordDevices.Skip(1).FirstOrDefault()};
         });
     }
@@ -108,13 +111,14 @@ public class MainViewModel : ObservableObject
 
             var playbackDevice = _enumerator.EnumerateAudioEndPoints(DataFlow.Render, DeviceState.Active)
                 .FirstOrDefault(d => d.FriendlyName == PlaybackDevice);
+
             Recorder1?.Warmup(_enumerator);
             Recorder2?.Warmup(_enumerator);
 
             Recorder1?.Start();
             Recorder2?.Start();
 
-            var playMs = new MemoryStream(File.ReadAllBytes("test.wav"));
+            var playMs = new MemoryStream(await File.ReadAllBytesAsync("test.wav"));
             WaveStream waveStream = new WaveFileReader(playMs);
             var totalTime = waveStream.TotalTime;
             var player = new WasapiOut(playbackDevice, AudioClientShareMode.Shared, true, 0);
@@ -124,7 +128,7 @@ public class MainViewModel : ObservableObject
             await Task.Delay(100);
             player.Play();
             playbackEnded.WaitHandle.WaitOne();
-            await Task.Delay(100);
+            await Task.Delay(200);
 
             Recorder1?.Stop();
             Recorder2?.Stop();
